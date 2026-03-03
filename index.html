@@ -3,12 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Confidence or Cruelty? Vocabulary Game</title>
+    <title>Confidence or Cruelty? Vocabulary Drive</title>
     <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #e67e22;
+            --road: #95a5a6;
+            --correct: #27ae60;
+            --wrong: #c0392b;
+            --background: #ecf0f1;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #e0f7fa;
-            color: #333;
+            background-color: var(--background);
             margin: 0;
             padding: 20px;
             display: flex;
@@ -16,236 +24,403 @@
             align-items: center;
         }
 
-        h1 {
-            color: #006064;
+        h1 { color: var(--primary); margin-bottom: 5px; }
+        .subtitle { color: #7f8c8d; margin-bottom: 20px; }
+
+        #intro-box {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid var(--accent);
+            margin-bottom: 20px;
+            box-sizing: border-box;
         }
 
+        #intro-box ol { margin-top: 5px; padding-left: 20px;}
+
         #game-container {
-            width: 90%;
+            width: 100%;
             max-width: 800px;
-            background-color: #fff;
+            background: white;
             border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             padding: 20px;
             text-align: center;
+            box-sizing: border-box;
         }
 
         #status-bar {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             font-size: 1.2em;
-            margin-bottom: 20px;
             font-weight: bold;
-            border-bottom: 2px solid #00acc1;
+            border-bottom: 2px solid #ddd;
             padding-bottom: 10px;
+            margin-bottom: 15px;
         }
 
         #target-word {
-            color: #c62828;
-            background-color: #ffcdd2;
-            padding: 5px 10px;
+            color: #d35400;
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #fce5cd;
+            padding: 5px 15px;
             border-radius: 4px;
-            font-family: monospace;
         }
 
-        #road {
+        /* --- The Road --- */
+        #road-container {
             position: relative;
             width: 100%;
-            height: 150px;
-            background-color: #9e9e9e;
+            height: 120px;
+            background-color: var(--road);
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             display: flex;
-            justify-content: space-around;
+            justify-content: space-between;
             align-items: center;
-            overflow: hidden;
-            border: 4px solid #424242;
+            padding: 0 2%;
+            box-sizing: border-box;
+            border-bottom: 6px solid #7f8c8d; /* Curb */
+        }
+
+        .road-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            border-top: 4px dashed white;
+            transform: translateY(-50%);
+            z-index: 1;
         }
 
         #hero {
             position: absolute;
-            font-size: 3em;
-            transition: left 0.5s ease-out;
-            left: 5%; /* Starting position */
+            font-size: 3.5em;
+            bottom: 10px;
+            left: 2%; /* Initial position */
             z-index: 10;
+            transition: left 0.6s ease-in-out; /* Driving animation */
         }
 
+        /* --- Zones (Answer choices) --- */
         .zone {
-            width: 25%;
-            height: 80%;
-            background-color: #b2dfdb;
-            border: 3px solid #00796b;
+            width: 31%;
+            height: 90%;
+            background-color: rgba(255,255,255,0.8);
+            border: 3px solid #7f8c8d;
             border-radius: 8px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 1em;
             cursor: pointer;
-            transition: background-color 0.3s, transform 0.2s;
-            color: #004d40;
-            font-weight: bold;
-            padding: 10px;
-            text-align: center;
+            transition: all 0.2s;
+            z-index: 5;
+            font-size: 0.9em;
+            padding: 5px;
             box-sizing: border-box;
+            font-weight: 500;
         }
 
         .zone:hover {
-            background-color: #80cbc4;
-            transform: scale(1.05);
+            transform: translateY(-3px);
+            background-color: white;
+            border-color: var(--accent);
         }
 
-        .zone.correct {
-            background-color: #81c784 !important;
-            border-color: #2e7d32 !important;
+        /* States added by JS */
+        .zone.selected-correct {
+            background-color: var(--correct) !important;
+            border-color: #1e8449 !important;
             color: white;
         }
 
-        .zone.wrong {
-            background-color: #e57373 !important;
-            border-color: #c62828 !important;
+        .zone.selected-wrong {
+            background-color: var(--wrong) !important;
+            border-color: #922b21 !important;
             color: white;
         }
 
-        #question-area {
-            background-color: #f1f8e9;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #dcedc8;
+        .zone.show-correct {
+            border-color: var(--correct) !important;
+            border-width: 4px;
+        }
+
+        .disabled-zone {
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        /* --- Feedback/Controls --- */
+        #ui-area {
+            min-height: 80px;
+            margin-top: 10px;
         }
 
         #feedback {
-            margin-top: 15px;
             font-size: 1.2em;
             font-weight: bold;
+            margin-bottom: 10px;
+            min-height: 1.4em;
         }
+
+        #next-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            font-size: 1em;
+            border-radius: 4px;
+            cursor: pointer;
+            display: none; /* Hidden until answer is checked */
+        }
+
+        #next-btn:hover { background-color: #34495e; }
+
     </style>
 </head>
 <body>
 
+    <h1>Vocabulary Drive</h1>
+    <p class="subtitle">Distinguishing nuances from confidence to cruelty.</p>
+
+    <div id="intro-box">
+        <strong>Goal:</strong> Read the Target Word. Then click on the zone containing the scenario that best represents that word. The hero (🚗) will drive to your choice!
+        <ol>
+            <li><strong>Healthy Confidence:</strong> toot your own horn</li>
+            <li><strong>Arrogance/Excess Pride:</strong> boast, brag, show off</li>
+            <li><strong>Arrogance/Provoking Envy:</strong> flaunt</li>
+            <li><strong>Cruelty/Malice:</strong> gloat</li>
+        </ol>
+    </div>
+
+    <div id="game-container">
+        <div id="status-bar">
+            <div>Score: <span id="score">0</span> / <span id="total-questions"></span></div>
+            <div>Target Word: <span id="target-word"></span></div>
+        </div>
+
+        <div id="road-container">
+            <div class="road-line"></div>
+            <div id="hero">🚗</div>
+            
+            <div class="zone" id="zone-0" onclick="handleZoneClick(0)"></div>
+            <div class="zone" id="zone-1" onclick="handleZoneClick(1)"></div>
+            <div class="zone" id="zone-2" onclick="handleZoneClick(2)"></div>
+        </div>
+
+        <div id="ui-area">
+            <div id="feedback"></div>
+            <button id="next-btn" onclick="nextQuestion()">Next Question</button>
+        </div>
+    </div>
+
     <script>
+        // --- GAME DATA ---
         const gameData = [
             {
                 word: "toot your own horn",
                 correct: 1,
-                statements: [
-                    "I am undoubtedly the finest musician this school has ever produced.",
-                    "I’m going to toot my own horn for a second: I finally finished that massive report today.",
-                    "It's comical how much better my project is than everyone else's."
-                ]
+                choices: [
+                    "I am the undisputed best player on this team, obviously.",
+                    "I normally don't like to toot my own horn, but I finally got an 'A' on my calculus final.",
+                    "Watching everyone else fail the test I aced was pretty hilarious."
+                ],
+                explanation: "Correct! Tooting your own horn is acknowledging a personal success, often modestly."
             },
             {
                 word: "boast",
                 correct: 2,
-                statements: [
-                    "We need to document our achievements so the boss knows our impact.",
-                    "Watch how high I can jump! You can’t do that, can you?",
-                    "At the dinner, he proceeded to boast for an hour about his perfect test scores and Ivy League acceptance."
-                ]
+                choices: [
+                    "I am sharing this award because I am genuinely proud of my team's hard work.",
+                    "Check out my new shoes. They’re fine, I guess.",
+                    "He proceeded to boast for twenty minutes about how much money he made on his last business trip."
+                ],
+                explanation: "Yes! Boasting involves speaking with excessive pride and self-satisfaction."
             },
             {
                 word: "brag",
                 correct: 0,
-                statements: [
-                    "You should see the new house I bought. It’s significantly larger and more luxurious than yours.",
-                    "It makes me proud that I worked hard enough to get that promotion.",
-                    "I managed to fix the entire system myself when the IT department gave up."
-                ]
+                choices: [
+                    "My score was a 98, which is higher than anybody else in the entire grade.",
+                    "I finished the project early! Now I can relax this weekend.",
+                    "I passed! The exam was tough, but I managed to get through it."
+                ],
+                explanation: "Correct! Bragging is arrogantly talking about one's achievements to make others feel inferior."
             },
             {
                 word: "show off",
                 correct: 1,
-                statements: [
-                    "Look at this drawing I did. I think the shading came out really well.",
-                    "He took every opportunity to show off his expensive watch, constantly adjusting his sleeve.",
-                    "I passed the audition! All those hours of practice paid off."
-                ]
+                choices: [
+                    "I've practiced this guitar solo, maybe I can play it for the class sometime.",
+                    "As soon as the teacher looked away, he started performing complicated flips just to show off to the other students.",
+                    "Look, I'm just telling you the facts. My dad’s car is more expensive than yours."
+                ],
+                explanation: "Right! Showing off is displaying something (a skill or object) ostentatiously to attract attention."
             },
             {
                 word: "flaunt",
                 correct: 0,
-                statements: [
-                    "They loved to flaunt their wealth, driving slow in the poor neighborhood in their brand new sports car.",
-                    "I’m sharing this picture because I’m genuinely proud of my art skills finally improving.",
-                    "He works hard, so it’s fair that he shows the trophy he won honestly."
-                ]
+                choices: [
+                    "She intentionally wore the massive diamond ring just to flaunt her wealth in front of her less fortunate coworkers.",
+                    "I’m going to use this nice bag because I bought it, not to make people jealous.",
+                    "Thank you, I worked very hard to afford this item."
+                ],
+                explanation: "Correct! Flaunting is deliberately displaying something proudly and provocatively to provoke envy."
             },
             {
                 word: "gloat",
                 correct: 2,
-                statements: [
-                    "I won the lottery! I can finally retire!",
-                    "Look, I’m faster than you. Accept your defeat.",
-                    "When she missed the game-winning shot, her rival couldn't help but gloat about it all weekend."
-                ]
+                choices: [
+                    "I won the game! Good try, everyone.",
+                    "Look, I'm just better at this game than you are.",
+                    "When his rival missed the game-winning kick, Marcus spent the next hour laughing at him and gloating about his own perfect record."
+                ],
+                explanation: "Yes. Gloating is deriving malice or great pleasure from another person's misfortune or failure."
             }
         ];
 
+        // --- STATE VARIABLES ---
         let currentQuestionIndex = 0;
         let score = 0;
+        let answeringAllowed = true; // Prevents double clicking or clicking after answering
 
-        const scoreEl = document.getElementById('score');
-        const wordEl = document.getElementById('target-word');
-        const heroEl = document.getElementById('hero');
-        const feedbackEl = document.getElementById('feedback');
-        const nextBtnEl = document.getElementById('next-btn');
-        const zoneEls = [
-            document.getElementById('zone-0'),
-            document.getElementById('zone-1'),
-            document.getElementById('zone-2')
-        ];
+        // --- DOM ELEMENTS ---
+        const els = {
+            score: document.getElementById('score'),
+            total: document.getElementById('total-questions'),
+            word: document.getElementById('target-word'),
+            hero: document.getElementById('hero'),
+            zones: [
+                document.getElementById('zone-0'),
+                document.getElementById('zone-1'),
+                document.getElementById('zone-2')
+            ],
+            feedback: document.getElementById('feedback'),
+            nextBtn: document.getElementById('next-btn')
+        };
 
+        // --- INITIALIZATION ---
+        function initGame() {
+            els.total.innerText = gameData.length;
+            score = 0;
+            currentQuestionIndex = 0;
+            updateScoreUI();
+            loadQuestion();
+        }
+
+        // --- LOAD QUESTION ---
         function loadQuestion() {
-            feedbackEl.innerText = "";
-            feedbackEl.style.color = "black";
-            nextBtnEl.style.display = "none";
-            heroEl.style.left = "5%"; // Reset hero position
+            const data = gameData[currentQuestionIndex];
+            answeringAllowed = true;
 
-            const currentData = gameData[currentQuestionIndex];
-            wordEl.innerText = currentData.word;
+            // UI Reset
+            els.word.innerText = data.word;
+            els.feedback.innerText = "";
+            els.feedback.style.color = "black";
+            els.nextBtn.style.display = "none";
+            els.nextBtn.innerText = "Next Question";
 
-            // Reset zone styles and populate text
-            zoneEls.forEach((zone, index) => {
-                zone.classList.remove('correct', 'wrong');
-                zone.innerText = currentData.statements[index];
+            // Reset Hero to starting line
+            els.hero.style.left = "2%";
+
+            // Update zones text and reset styles
+            els.zones.forEach((zone, index) => {
+                zone.innerText = data.choices[index];
+                zone.className = "zone"; // Reset classes
             });
         }
 
-        function checkAnswer(selectedIndex) {
-            const currentData = gameData[currentQuestionIndex];
-            const heroPositions = ["25%", "50%", "75%"]; // Positions corresponding to zones
+        // --- HANDLE USER CLICK ---
+        function handleZoneClick(selectedIndex) {
+            if (!answeringAllowed) return; // Ignore clicks if they already answered
+            answeringAllowed = false; // Lock interactions
 
-            // Drive the hero to the selected zone
-            heroEl.style.left = heroPositions[selectedIndex];
+            // 1. Move the Hero (Driving animation)
+            // Left percentages corresponding to center of zones (roughly)
+            const drivingPositions = ["15%", "48%", "81%"]; 
+            els.hero.style.left = drivingPositions[selectedIndex];
 
-            setTimeout(() => { // Delay feedback until car moves
-                if (selectedIndex === currentData.correct) {
-                    feedbackEl.innerText = "Correct! You nailed the nuance.";
-                    feedbackEl.style.color = "green";
-                    zoneEls[selectedIndex].classList.add('correct');
-                    score++;
-                    scoreEl.innerText = score;
-                } else {
-                    feedbackEl.innerText = `Incorrect. The correct statement was: Zone ${currentData.correct + 1}`;
-                    feedbackEl.style.color = "red";
-                    zoneEls[selectedIndex].classList.add('wrong');
-                    zoneEls[currentData.correct].classList.add('correct'); // Show correct answer
-                }
+            // Add basic formatting to show selected zone immediately
+            els.zones.forEach(zone => zone.classList.add('disabled-zone')); // visually disable all
+            els.zones[selectedIndex].classList.add('disabled-zone');
 
-                nextBtnEl.style.display = "block";
-                currentQuestionIndex++;
-
-                if (currentQuestionIndex >= gameData.length) {
-                    nextBtnEl.innerText = "Game Over - Play Again?";
-                    currentQuestionIndex = 0;
-                    score = 0;
-                } else {
-                    nextBtnEl.innerText = "Next Question";
-                }
-            }, 600); // Slight delay for the drive animation
+            // 2. Wait for animation to finish before checking answer
+            setTimeout(() => {
+                checkAnswer(selectedIndex);
+            }, 700); // slightly longer than the CSS transition
         }
 
-        // Initial load
-        loadQuestion();
+        // --- CHECK ANSWER & SHOW FEEDBACK ---
+        function checkAnswer(selectedIndex) {
+            const data = gameData[currentQuestionIndex];
+            const correctIndex = data.correct;
+
+            // Mark chosen zone and show correct one if they got it wrong
+            if (selectedIndex === correctIndex) {
+                // Correct
+                score++;
+                els.zones[selectedIndex].classList.add('selected-correct');
+                els.feedback.innerText = data.explanation;
+                els.feedback.style.color = "var(--correct)";
+                updateScoreUI();
+            } else {
+                // Incorrect
+                els.zones[selectedIndex].classList.add('selected-wrong');
+                // Highlight the actual correct zone
+                els.zones[correctIndex].classList.add('show-correct');
+                
+                els.feedback.innerText = `Incorrect. The car should have driven to Zone ${correctIndex + 1}.`;
+                els.feedback.style.color = "var(--wrong)";
+            }
+
+            // Show Next/End button
+            els.nextBtn.style.display = "inline-block";
+            if (currentQuestionIndex === gameData.length - 1) {
+                els.nextBtn.innerText = "See Results";
+            }
+        }
+
+        function updateScoreUI() {
+            els.score.innerText = score;
+        }
+
+        // --- NEXT QUESTION / RESET ---
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < gameData.length) {
+                loadQuestion();
+            } else {
+                showFinalScore();
+            }
+        }
+
+        function showFinalScore() {
+            // Hide everything on road
+            els.zones.forEach(zone => zone.style.visibility = "hidden");
+            els.hero.style.visibility = "hidden";
+            
+            els.word.innerText = "GAME OVER";
+            els.feedback.innerText = `Final Score: ${score} out of ${gameData.length}`;
+            els.feedback.style.color = "var(--primary)";
+            
+            els.nextBtn.innerText = "Play Again?";
+            els.nextBtn.onclick = function() {
+                // Quick reset for button logic
+                els.nextBtn.onclick = nextQuestion;
+                // Show hidden elements
+                els.zones.forEach(zone => zone.style.visibility = "visible");
+                els.hero.style.visibility = "visible";
+                initGame();
+            }
+        }
+
+        // --- START THE GAME ---
+        initGame();
+
     </script>
 </body>
 </html>
