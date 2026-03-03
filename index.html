@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confidence or Cruelty? Vocabulary Game</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #e0f7fa;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #006064;
+        }
+
+        #game-container {
+            width: 90%;
+            max-width: 800px;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            padding: 20px;
+            text-align: center;
+        }
+
+        #status-bar {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            font-weight: bold;
+            border-bottom: 2px solid #00acc1;
+            padding-bottom: 10px;
+        }
+
+        #target-word {
+            color: #c62828;
+            background-color: #ffcdd2;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        #road {
+            position: relative;
+            width: 100%;
+            height: 150px;
+            background-color: #9e9e9e;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            overflow: hidden;
+            border: 4px solid #424242;
+        }
+
+        #hero {
+            position: absolute;
+            font-size: 3em;
+            transition: left 0.5s ease-out;
+            left: 5%; /* Starting position */
+            z-index: 10;
+        }
+
+        .zone {
+            width: 25%;
+            height: 80%;
+            background-color: #b2dfdb;
+            border: 3px solid #00796b;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            color: #004d40;
+            font-weight: bold;
+            padding: 10px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .zone:hover {
+            background-color: #80cbc4;
+            transform: scale(1.05);
+        }
+
+        .zone.correct {
+            background-color: #81c784 !important;
+            border-color: #2e7d32 !important;
+            color: white;
+        }
+
+        .zone.wrong {
+            background-color: #e57373 !important;
+            border-color: #c62828 !important;
+            color: white;
+        }
+
+        #question-area {
+            background-color: #f1f8e9;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #dcedc8;
+        }
+
+        #feedback {
+            margin-top: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <script>
+        const gameData = [
+            {
+                word: "toot your own horn",
+                correct: 1,
+                statements: [
+                    "I am undoubtedly the finest musician this school has ever produced.",
+                    "I’m going to toot my own horn for a second: I finally finished that massive report today.",
+                    "It's comical how much better my project is than everyone else's."
+                ]
+            },
+            {
+                word: "boast",
+                correct: 2,
+                statements: [
+                    "We need to document our achievements so the boss knows our impact.",
+                    "Watch how high I can jump! You can’t do that, can you?",
+                    "At the dinner, he proceeded to boast for an hour about his perfect test scores and Ivy League acceptance."
+                ]
+            },
+            {
+                word: "brag",
+                correct: 0,
+                statements: [
+                    "You should see the new house I bought. It’s significantly larger and more luxurious than yours.",
+                    "It makes me proud that I worked hard enough to get that promotion.",
+                    "I managed to fix the entire system myself when the IT department gave up."
+                ]
+            },
+            {
+                word: "show off",
+                correct: 1,
+                statements: [
+                    "Look at this drawing I did. I think the shading came out really well.",
+                    "He took every opportunity to show off his expensive watch, constantly adjusting his sleeve.",
+                    "I passed the audition! All those hours of practice paid off."
+                ]
+            },
+            {
+                word: "flaunt",
+                correct: 0,
+                statements: [
+                    "They loved to flaunt their wealth, driving slow in the poor neighborhood in their brand new sports car.",
+                    "I’m sharing this picture because I’m genuinely proud of my art skills finally improving.",
+                    "He works hard, so it’s fair that he shows the trophy he won honestly."
+                ]
+            },
+            {
+                word: "gloat",
+                correct: 2,
+                statements: [
+                    "I won the lottery! I can finally retire!",
+                    "Look, I’m faster than you. Accept your defeat.",
+                    "When she missed the game-winning shot, her rival couldn't help but gloat about it all weekend."
+                ]
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+
+        const scoreEl = document.getElementById('score');
+        const wordEl = document.getElementById('target-word');
+        const heroEl = document.getElementById('hero');
+        const feedbackEl = document.getElementById('feedback');
+        const nextBtnEl = document.getElementById('next-btn');
+        const zoneEls = [
+            document.getElementById('zone-0'),
+            document.getElementById('zone-1'),
+            document.getElementById('zone-2')
+        ];
+
+        function loadQuestion() {
+            feedbackEl.innerText = "";
+            feedbackEl.style.color = "black";
+            nextBtnEl.style.display = "none";
+            heroEl.style.left = "5%"; // Reset hero position
+
+            const currentData = gameData[currentQuestionIndex];
+            wordEl.innerText = currentData.word;
+
+            // Reset zone styles and populate text
+            zoneEls.forEach((zone, index) => {
+                zone.classList.remove('correct', 'wrong');
+                zone.innerText = currentData.statements[index];
+            });
+        }
+
+        function checkAnswer(selectedIndex) {
+            const currentData = gameData[currentQuestionIndex];
+            const heroPositions = ["25%", "50%", "75%"]; // Positions corresponding to zones
+
+            // Drive the hero to the selected zone
+            heroEl.style.left = heroPositions[selectedIndex];
+
+            setTimeout(() => { // Delay feedback until car moves
+                if (selectedIndex === currentData.correct) {
+                    feedbackEl.innerText = "Correct! You nailed the nuance.";
+                    feedbackEl.style.color = "green";
+                    zoneEls[selectedIndex].classList.add('correct');
+                    score++;
+                    scoreEl.innerText = score;
+                } else {
+                    feedbackEl.innerText = `Incorrect. The correct statement was: Zone ${currentData.correct + 1}`;
+                    feedbackEl.style.color = "red";
+                    zoneEls[selectedIndex].classList.add('wrong');
+                    zoneEls[currentData.correct].classList.add('correct'); // Show correct answer
+                }
+
+                nextBtnEl.style.display = "block";
+                currentQuestionIndex++;
+
+                if (currentQuestionIndex >= gameData.length) {
+                    nextBtnEl.innerText = "Game Over - Play Again?";
+                    currentQuestionIndex = 0;
+                    score = 0;
+                } else {
+                    nextBtnEl.innerText = "Next Question";
+                }
+            }, 600); // Slight delay for the drive animation
+        }
+
+        // Initial load
+        loadQuestion();
+    </script>
+</body>
+</html>
